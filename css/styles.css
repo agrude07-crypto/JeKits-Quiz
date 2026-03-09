@@ -516,111 +516,41 @@ h1 {
     box-shadow: 0 10px 20px rgba(255, 215, 0, 0.3);
 }
 
-/* Podest & animierte Figuren */
+/* Podest */
 .podium {
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    height: 350px; /* Mehr Platz nach oben für die Figuren */
+    height: 300px;
     margin-top: 50px;
-    gap: 15px;
+    gap: 10px;
 }
 .podium-place {
-    width: 120px;
+    width: 100px;
     background: var(--color-primary);
     color: white;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: flex-start;
     align-items: center;
-    padding-bottom: 20px;
+    padding-top: 15px;
     border-radius: 10px 10px 0 0;
     font-family: var(--font-heading);
-    font-size: 3rem;
+    font-size: 2rem;
     position: relative;
     box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
 }
-
-/* JeKits Dancing Figures */
-.podium-figure {
-    position: absolute;
-    bottom: 100%; /* Stand exactly on top of the podium block */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 250px; /* Adjust according to image slice */
-    height: 300px;
-    background-image: url('../img/figures/jekits_kids.png');
-    background-size: 300% 100%; /* 3 figures horizontally */
-    background-repeat: no-repeat;
-    z-index: 10;
-}
-
-/* Character mapping based on position */
-/* 2nd place - left child (Bobbing gently) */
-.place-2 .podium-figure {
-    background-position: 0% 0%; 
-    height: 290px;
-    animation: danceLeft 2s infinite alternate ease-in-out;
-}
-/* 1st place - center child (Jumping higher) */
-.place-1 .podium-figure {
-    background-position: 50% 0%;
-    width: 200px;
-    height: 320px;
-    animation: danceCenter 1s infinite alternate ease-in-out;
-}
-/* 3rd place - right child (Swaying) */
-.place-3 .podium-figure {
-    background-position: 100% 0%;
-    height: 290px;
-    animation: danceRight 2.5s infinite alternate ease-in-out;
-}
-
-/* Dance Animations */
-@keyframes danceCenter {
-    0% { transform: translateX(-50%) translateY(0); }
-    100% { transform: translateX(-50%) translateY(-20px); }
-}
-@keyframes danceLeft {
-    0% { transform: translateX(-50%) rotate(-3deg); }
-    100% { transform: translateX(-50%) rotate(3deg) translateY(-5px); }
-}
-@keyframes danceRight {
-    0% { transform: translateX(-50%) rotate(4deg); }
-    100% { transform: translateX(-50%) rotate(-4deg) translateY(-5px); }
-}
-
-.podium-place.place-1 { height: 200px; background: #ffd700; color: #333; }
-.podium-place.place-2 { height: 140px; background: #e0e0e0; color: #333;}
-.podium-place.place-3 { height: 90px; background: #cd7f32; }
-
-/* Name labels floating above the dancing characters */
+.podium-place.place-1 { height: 250px; background: #ffd700; color: #333; }
+.podium-place.place-2 { height: 180px; background: #e0e0e0; color: #333;}
+.podium-place.place-3 { height: 130px; background: #cd7f32; }
 .podium-name {
     position: absolute;
-    top: -330px; /* High above the characters */
-    left: 50%;
-    transform: translateX(-50%);
+    top: -40px;
     font-family: var(--font-body);
     font-size: 1.2rem;
     font-weight: bold;
-    color: var(--color-primary);
-    background: white;
-    padding: 10px 15px;
-    border-radius: 10px;
+    color: var(--color-text);
     white-space: nowrap;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    z-index: 20;
-    text-align: center;
-}
-.place-1 .podium-name { top: -380px; border: 3px solid #ffd700; }
-.place-2 .podium-name { top: -330px; border: 3px solid #e0e0e0; }
-.place-3 .podium-name { top: -330px; border: 3px solid #cd7f32; }
-
-.podium-name small {
-    display: block;
-    color: var(--color-secondary);
-    font-size: 1rem;
-    margin-top: 5px;
 }
 
 /* Questions Result Overview */
