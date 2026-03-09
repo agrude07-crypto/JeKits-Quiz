@@ -580,14 +580,14 @@ class QuizApp {
                     angle: 60,
                     spread: 55,
                     origin: { x: 0 },
-                    colors: ['#193264', '#e63946', '#ffd700']
+                    colors: ['#03256a', '#E83300', '#00A6EB', '#b1ca00']
                 });
                 confetti({
                     particleCount: 5,
                     angle: 120,
                     spread: 55,
                     origin: { x: 1 },
-                    colors: ['#193264', '#e63946', '#ffd700']
+                    colors: ['#03256a', '#E83300', '#00A6EB', '#b1ca00']
                 });
 
                 if (Date.now() < end) {
