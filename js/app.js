@@ -334,7 +334,17 @@ class QuizApp {
         list.innerHTML = '';
         
         const limit = isGameOver ? sortedPlayers.length : Math.min(10, sortedPlayers.length);
-        
+        const titleEl = document.getElementById('host-ranking-title');
+        if (isGameOver) {
+            titleEl.innerText = "Gesamtes Ranking";
+        } else if (sortedPlayers.length > 10) {
+            titleEl.innerText = "Top 10 Ranking";
+        } else if (sortedPlayers.length > 5) {
+            titleEl.innerText = `Top ${sortedPlayers.length} Ranking`;
+        } else {
+            titleEl.innerText = "Top 5 Ranking";
+        }
+
         for (let i = 0; i < limit; i++) {
             const p = sortedPlayers[i];
             const li = document.createElement('li');
