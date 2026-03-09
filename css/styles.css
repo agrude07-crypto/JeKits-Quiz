@@ -454,14 +454,41 @@ h1 {
     margin: 20px 0;
 }
 .points-badge {
-    background: var(--color-primary);
+    background: var(--color-correct);
     color: white;
     padding: 10px 20px;
     border-radius: 20px;
     font-size: 1.5rem;
     font-weight: bold;
     display: inline-block;
+    margin: 15px 0;
 }
+
+/* OVERVIEW SCREEN */
+.overview-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 10px;
+}
+.overview-btn {
+    flex: 1 1 calc(33.333% - 10px);
+    min-width: 150px;
+    padding: 15px !important;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+.overview-btn.active-question {
+    border: 3px solid var(--color-primary);
+    background: #eef3ff;
+}
+
 .final-rank-circle {
     width: 120px;
     height: 120px;

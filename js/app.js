@@ -9,6 +9,7 @@ class QuizApp {
         this.timeLeft = 0;
         this.isLocal = false; // True wenn kein PeerJS verwendet wird (Singleplayer)
         this.questionStartTime = 0;
+        this.previousScreen = ''; // Für den "Zurück" Button im Overview
 
         // Eigene Spieler-Daten
         this.myScore = 0;
@@ -75,7 +76,7 @@ class QuizApp {
 
     // --- HOST LOGIK ---
     onPlayerJoined(id, name) {
-        this.players[id] = { name: name, score: 0, active: true, answeredIndex: -1, answerTime: 0 };
+        this.players[id] = { name: name, score: 0, scoreHistory: [], active: true, answeredIndex: -1, answerTime: 0 };
         this.updatePlayerList();
         
         if (Object.keys(this.players).length > 0) {
@@ -208,20 +209,33 @@ class QuizApp {
         // Max 1000 pkt. (100% == 0s), 50% decay over TIME_PER_QUESTION
         for (let pid in this.players) {
             const p = this.players[pid];
+            
+            // Ensure scoreHistory array is big enough
+            while(p.scoreHistory.length <= this.currentQuestionIndex) {
+                p.scoreHistory.push(0);
+            }
+
             if (p.active && p.answeredIndex === q.correctIndex) {
                 const ratio = Math.max(0, 1 - (p.answerTime / (TIME_PER_QUESTION * 1000)));
                 const points = Math.round(500 + (500 * ratio));
-                p.score += points;
+                
+                // Track points for this specific question
+                p.scoreHistory[this.currentQuestionIndex] = points;
+                p.score = p.scoreHistory.reduce((sum, val) => sum + val, 0);
                 
                 if (!this.isLocal) {
                     window.network.connections[pid]?.send({ cmd: 'result', correct: true, points: points, totalScore: p.score });
                 }
             } else if (p.active && p.answeredIndex !== -1) {
+                p.scoreHistory[this.currentQuestionIndex] = 0;
+                p.score = p.scoreHistory.reduce((sum, val) => sum + val, 0);
                 if (!this.isLocal) {
                     window.network.connections[pid]?.send({ cmd: 'result', correct: false, points: 0, totalScore: p.score });
                 }
             } else if (p.active) {
                 // Timeout
+                p.scoreHistory[this.currentQuestionIndex] = 0;
+                p.score = p.scoreHistory.reduce((sum, val) => sum + val, 0);
                 if (!this.isLocal) {
                     window.network.connections[pid]?.send({ cmd: 'result', correct: false, points: 0, totalScore: p.score });
                 }
@@ -390,6 +404,56 @@ class QuizApp {
             this.showScreen('screen-host-final');
         }
     }
+
+    // --- OVERVIEW & JUMP NAVIGATION ---
+    showOverview() {
+        // Track where we came from so "Zurück" knows where to go
+        this.previousScreen = document.querySelector('.screen.active').id;
+        
+        const list = document.getElementById('overview-list');
+        list.innerHTML = '';
+
+        questions.forEach((q, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline overview-btn';
+            if (idx === this.currentQuestionIndex) {
+                btn.classList.add('active-question');
+            }
+            btn.innerHTML = `<strong>Frage ${idx + 1}:</strong><br/><span style="font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${q.text}</span>`;
+            
+            btn.onclick = () => {
+                if(confirm(`Möchtest du wirklich zu Frage ${idx + 1} springen? Alle Punkte ab dieser Frage werden gelöscht.`)) {
+                    this.jumpToQuestion(idx);
+                }
+            };
+            
+            list.appendChild(btn);
+        });
+
+        this.showScreen('screen-host-overview');
+    }
+
+    closeOverview() {
+        if (this.previousScreen) {
+            this.showScreen(this.previousScreen);
+        }
+    }
+
+    jumpToQuestion(index) {
+        this.currentQuestionIndex = index;
+        
+        // Rollback score history for all players up to the new current question
+        for (let pid in this.players) {
+            const p = this.players[pid];
+            // keep history strictly before `index`, then recalculate score
+            p.scoreHistory = p.scoreHistory.slice(0, index);
+            p.score = p.scoreHistory.reduce((sum, val) => sum + val, 0);
+        }
+        
+        // Render the new question (this also broadcasts 'start_timer' and 'question' commands to clients)
+        this.renderHostQuestion();
+    }
+
 
     // --- CLIENT LOGIK ---
     async joinGame() {
