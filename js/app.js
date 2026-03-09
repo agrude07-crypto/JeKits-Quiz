@@ -139,9 +139,10 @@ class QuizApp {
         if (!this.isLocal) {
             window.network.broadcast({ 
                 cmd: 'question', 
-                index: this.currentQuestionIndex,
                 text: q.text,
-                options: q.options
+                answers: q.options,
+                current: this.currentQuestionIndex + 1,
+                total: questions.length
             });
             window.network.broadcast({
                 cmd: 'start_timer',
@@ -488,9 +489,12 @@ class QuizApp {
             
             // Fragentext und Optionen auf dem Smartphone anzeigen
             document.getElementById('player-q-text').innerText = data.text;
-            document.getElementById('player-ans-a').innerText = data.options[0];
-            document.getElementById('player-ans-b').innerText = data.options[1];
-            document.getElementById('player-ans-c').innerText = data.options[2];
+            document.getElementById('player-ans-a').innerText = data.answers[0];
+            document.getElementById('player-ans-b').innerText = data.answers[1];
+            document.getElementById('player-ans-c').innerText = data.answers[2];
+            if (data.current && data.total) {
+                document.getElementById('player-q-number').innerText = `Frage ${data.current} von ${data.total}`;
+            }
             
             this.showScreen('screen-player-question');
         } else if (data.cmd === 'start_timer') {
