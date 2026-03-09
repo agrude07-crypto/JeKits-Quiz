@@ -556,4 +556,18 @@ h1 {
     .answer-card { min-width: 100%; padding: 15px; flex-direction: row; justify-content: flex-start; gap: 20px;}
     .answer-card .letter { font-size: 2.5rem; margin-bottom: 0; }
     .answer-card .text { text-align: left; }
+
+    /* Player Timer Adjustments */
+    #screen-player-question .timer-container {
+        margin: 5px 0 10px 0;
+    }
+    #screen-player-question .timer {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+        border-width: 3px;
+    }
+    #screen-player-question .progress-bar-container {
+        margin-bottom: 5px;
+    }
 }

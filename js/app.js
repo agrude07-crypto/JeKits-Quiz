@@ -5,6 +5,7 @@ class QuizApp {
         this.players = {}; // id -> { name, score, active, answeredIndex, answerTime }
         this.currentQuestionIndex = 0;
         this.timerInterval = null;
+        this.playerTimerInterval = null;
         this.timeLeft = 0;
         this.isLocal = false; // True wenn kein PeerJS verwendet wird (Singleplayer)
         this.questionStartTime = 0;
@@ -140,6 +141,11 @@ class QuizApp {
                 index: this.currentQuestionIndex,
                 text: q.text,
                 options: q.options
+            });
+            window.network.broadcast({
+                cmd: 'start_timer',
+                timePerQuestion: TIME_PER_QUESTION,
+                hostStartTime: this.questionStartTime
             });
         }
     }
@@ -399,7 +405,35 @@ class QuizApp {
             document.getElementById('player-ans-c').innerText = data.options[2];
             
             this.showScreen('screen-player-question');
+        } else if (data.cmd === 'start_timer') {
+            const tEl = document.getElementById('player-timer');
+            const pEl = document.getElementById('player-progress');
+            
+            // Initial render
+            tEl.innerText = data.timePerQuestion;
+            pEl.style.width = '100%';
+            
+            clearInterval(this.playerTimerInterval);
+            
+            this.playerTimerInterval = setInterval(() => {
+                // Calculate time passed since host started the question to avoid drift
+                // (using local Date.now() assuming the clocks are relatively close, or just count down 1s at a time)
+                // For a simple robust approach, just count down locally like the host does.
+                let currentVal = parseInt(tEl.innerText);
+                currentVal--;
+                
+                if (currentVal >= 0) {
+                    tEl.innerText = currentVal;
+                    pEl.style.width = `${(currentVal / data.timePerQuestion) * 100}%`;
+                }
+
+                if (currentVal <= 0) {
+                    clearInterval(this.playerTimerInterval);
+                }
+            }, 1000);
+
         } else if (data.cmd === 'result') {
+            clearInterval(this.playerTimerInterval);
             const titleEl = document.getElementById('player-result-title');
             const iconEl = document.getElementById('player-result-icon');
             const ptsEl = document.getElementById('player-result-points');
@@ -440,6 +474,7 @@ class QuizApp {
             this.endQuestion(); // Sofort auflösen
         } else {
             this.hasAnswered = true;
+            clearInterval(this.playerTimerInterval);
             window.network.sendAnswer(index);
             document.getElementById('player-answered-msg').classList.remove('hidden');
         }
