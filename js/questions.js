@@ -78,7 +78,7 @@ const questions = [
       "Etwa 350",
       "Über 500"
     ],
-    correctIndex: 2
+    correctIndex: 0
   },
   {
     text: "Was zeichnet den Unterricht in JeKits 2-4 im Schwerpunkt Instrumente besonders aus?",

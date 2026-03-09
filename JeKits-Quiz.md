@@ -62,7 +62,7 @@
 * B: Ein abgestimmtes Erstgespräch mit Rollenklärung
 * C: Ein vorgegebener Unterrichtsplan für jede Woche
 
-### 13. Welche Funktion hat der RaDiv (Rat der Interessenvertretungen)?
+### 13. Welche Funktion hat der RadIv (Rat der Interessenvertretungen)?
 * A: Er entscheidet über die Schwerpunktwahl der Schulen
 * B: Er bündelt Perspektiven aller beteiligten Gruppen im Programm
 * C: Er erstellt einheitliche Unterrichtskonzepte
