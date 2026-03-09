@@ -391,7 +391,8 @@ class QuizApp {
         const getPodiumEl = (player, place) => {
             return `
                 <div class="podium-place place-${place}">
-                    <div class="podium-name">${player.name}<br><small>${player.score}</small></div>
+                    <div class="podium-figure"></div>
+                    <div class="podium-name">${player.name}<br><small>${player.score} pt</small></div>
                     ${place}
                 </div>
             `;
