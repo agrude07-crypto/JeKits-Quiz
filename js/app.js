@@ -237,6 +237,75 @@ class QuizApp {
 
         document.getElementById('host-correct-text').innerText = `${String.fromCharCode(65 + q.correctIndex)}: ${q.options[q.correctIndex]}`;
 
+        // 1. Calculate Answer Distribution
+        const distribution = [0, 0, 0];
+        const correctPlayers = [];
+
+        const activePlayers = Object.values(this.players).filter(p => p.active || p.score > 0);
+
+        activePlayers.forEach(p => {
+            if (p.answeredIndex >= 0 && p.answeredIndex <= 2) {
+                distribution[p.answeredIndex]++;
+                
+                // 2. Collect Correct Players
+                if (p.answeredIndex === q.correctIndex) {
+                    correctPlayers.push(p);
+                }
+            }
+        });
+
+        // Update Distribution UI
+        const distContainer = document.getElementById('host-answers-distribution');
+        distContainer.innerHTML = '';
+        ['A', 'B', 'C'].forEach((letter, i) => {
+            const count = distribution[i];
+            const div = document.createElement('div');
+            div.className = 'dist-item';
+            div.innerHTML = `<strong>${letter}:</strong> ${count} Antwort${count !== 1 ? 'en' : ''}`;
+            if (i === q.correctIndex) div.style.color = 'var(--color-correct)';
+            distContainer.appendChild(div);
+        });
+
+        // Update Winner UI (Top 5 Fastest Correct)
+        const winnerContainer = document.getElementById('host-round-winner');
+        winnerContainer.innerHTML = ''; // Clear old content
+        
+        if (correctPlayers.length > 0) {
+            // Sort by lowest answer time first
+            correctPlayers.sort((a,b) => a.answerTime - b.answerTime);
+            
+            const listEl = document.createElement('ul');
+            listEl.style.listStyle = 'none';
+            listEl.style.padding = '0';
+            listEl.style.margin = '10px 0 0 0';
+            listEl.style.textAlign = 'left';
+
+            const limit = Math.min(5, correctPlayers.length);
+            for(let i=0; i<limit; i++) {
+                const p = correctPlayers[i];
+                const timeInSeconds = (p.answerTime / 1000).toFixed(1);
+                const li = document.createElement('li');
+                li.style.padding = '5px 0';
+                li.style.borderBottom = '1px solid #eee';
+                li.style.display = 'flex';
+                li.style.justifyContent = 'space-between';
+                li.innerHTML = `<span><strong style="color:var(--color-primary)">${i+1}.</strong> ${p.name}</span> <span style="color:#666">${timeInSeconds} s</span>`;
+                listEl.appendChild(li);
+            }
+            winnerContainer.appendChild(listEl);
+        } else {
+            winnerContainer.innerHTML = `<em>Niemand</em>`;
+        }
+
+        this.showScreen('screen-host-result');
+        
+        if (this.currentQuestionIndex >= questions.length - 1) {
+            document.getElementById('btn-next-question').innerText = "Ergebnisse anzeigen";
+            this.confetti();
+        }
+    }
+
+    showIntermediateRanking() {
         // Ranking sortieren
         const sortedPlayers = Object.values(this.players).filter(p => p.active || p.score > 0).sort((a,b) => b.score - a.score);
         
@@ -256,12 +325,7 @@ class QuizApp {
             }
         }
 
-        this.showScreen('screen-host-result');
-        
-        if (this.currentQuestionIndex >= questions.length - 1) {
-            document.getElementById('btn-next-question').innerText = "Ergebnisse anzeigen";
-            this.confetti();
-        }
+        this.showScreen('screen-host-ranking');
     }
 
     nextQuestion() {
