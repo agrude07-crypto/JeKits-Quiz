@@ -1,12 +1,13 @@
 /* Globale Styles & Variablen */
 :root {
-    --color-primary: #193264; /* Dunkelblau aus JeKits */
-    --color-primary-light: #2c4a8a;
-    --color-secondary: #e63946;
+    --color-primary: #03256a; /* Dunkelblau aus JeKits */
+    --color-primary-light: #0d3587; /* Leichterer Hover-Ton */
+    --color-secondary: #00A6EB; /* Hellblau */
+    --color-timer: #EC6400; /* Orange für den Countdown */
     --color-bg-light: #ffffff;
     --color-text: #333333;
-    --color-correct: #2a9d8f;
-    --color-wrong: #e76f51;
+    --color-correct: #b1ca00; /* Grün */
+    --color-wrong: #E83300; /* Rot */
     --font-heading: 'Zilla Slab', serif;
     --font-body: 'Montserrat', sans-serif;
 }
@@ -346,9 +347,9 @@ h1 {
     font-weight: bold;
     line-height: 1.3;
 }
-.answer-a { background-color: var(--color-primary); }
-.answer-b { background-color: #fca311; }
-.answer-c { background-color: var(--color-secondary); }
+.answer-a { background-color: #E83300; }
+.answer-b { background-color: #00A6EB; }
+.answer-c { background-color: #b1ca00; }
 
 /* Forms */
 .form-group {
@@ -382,7 +383,7 @@ h1 {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: var(--color-secondary);
+    background: var(--color-timer);
     color: white;
     font-size: 2rem;
     font-family: var(--font-heading);
@@ -400,7 +401,7 @@ h1 {
 }
 .progress-bar {
     height: 100%;
-    background: var(--color-secondary);
+    background: var(--color-timer);
     width: 0%;
     transition: width 0.3s;
 }
