@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JeKits Live Quiz</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Libraries -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- SCREEN: START -->
+        <div id="screen-start" class="screen active">
+            <div class="logo-container">
+                <img src="img/JeKits_Logo_klRand.png" alt="JeKits Logo" class="logo" onerror="this.style.display='none';">
+                <h1>QUIZ TIME</h1>
+            </div>
+            <div class="card">
+                <h2>Willkommen beim JeKits Quiz</h2>
+                <div class="btn-group">
+                    <button class="btn btn-primary btn-large" onclick="app.initHost()">Quiz starten (Host)</button>
+                    <button class="btn btn-secondary btn-large" onclick="app.initPlayer()">Am Quiz teilnehmen</button>
+                    <button class="btn btn-outline" onclick="app.initLocal()">Lokal spielen (Ohne WLAN)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: HOST LOBBY -->
+        <div id="screen-host-lobby" class="screen">
+            <div class="top-bar">
+                <button class="btn btn-outline btn-small" onclick="location.reload()">← Abbrechen</button>
+                JeKits Quiz - Lobby
+                <div style="width: 100px;"></div> <!-- Spacer -->
+            </div>
+            <div class="lobby-container">
+                <div class="join-info card">
+                    <h2>Mitspielen!</h2>
+                    <p>Gehe auf diese Seite und gib den Code ein:</p>
+                    <div class="game-code" id="host-game-id">Lade...</div>
+                    <p>Oder scanne den QR-Code:</p>
+                    <div id="qrcode" class="qr-box"></div>
+                </div>
+                <div class="players-info card">
+                    <h3>Teilnehmende (<span id="player-count">0</span>)</h3>
+                    <ul id="player-list" class="player-list">
+                        <!-- Players will be added here -->
+                    </ul>
+                    <button class="btn btn-primary btn-large start-btn" id="btn-start-quiz" onclick="app.startQuiz()" disabled>Quiz starten</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: PLAYER LOGIN -->
+        <div id="screen-player-login" class="screen">
+            <div class="card login-card">
+                <h2>Beitreten</h2>
+                <div class="form-group">
+                    <label for="input-game-id">Game PIN (vom Host):</label>
+                    <input type="text" id="input-game-id" placeholder="z.B. 12345" autocomplete="off" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label for="input-player-name">Dein Name / Team:</label>
+                    <input type="text" id="input-player-name" placeholder="Name eingeben" autocomplete="off" maxlength="15">
+                </div>
+                <button class="btn btn-primary btn-large full-width" onclick="app.joinGame()">Los geht's!</button>
+                <button class="btn btn-outline full-width" onclick="app.showScreen('screen-start')">Zurück</button>
+                <div id="join-error" class="error-msg"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN: WAIT (Player waiting for host) -->
+        <div id="screen-wait" class="screen">
+            <div class="card center-content">
+                <div class="spinner"></div>
+                <h2 id="wait-message">Warte auf den Host...</h2>
+                <p>Gleich geht es los! Mach dich bereit.</p>
+            </div>
+        </div>
+
+        <!-- SCREEN: HOST QUESTION -->
+        <div id="screen-host-question" class="screen">
+            <div class="top-bar-in-game">
+                <button class="btn btn-outline btn-small" onclick="if(confirm('Quiz wirklich beenden?')) location.reload()">Beenden</button>
+            </div>
+            <div class="progress-bar-container"><div class="progress-bar" id="host-progress"></div></div>
+            <div class="question-header">Frage <span id="host-q-num">1</span>/19</div>
+            <div class="question-box card">
+                <h2 id="host-q-text">Fragentext</h2>
+            </div>
+            
+            <div class="timer-container">
+                <div class="timer" id="host-timer">20</div>
+            </div>
+
+            <div class="answers-grid" id="host-answers">
+                <div class="answer-card" data-index="0"><span class="letter">A</span> <span class="text">Antwort A</span></div>
+                <div class="answer-card" data-index="1"><span class="letter">B</span> <span class="text">Antwort B</span></div>
+                <div class="answer-card" data-index="2"><span class="letter">C</span> <span class="text">Antwort C</span></div>
+            </div>
+            
+            <div class="host-controls">
+                <span id="answers-received">0 Antworten erhalten</span>
+                <button class="btn btn-secondary" onclick="app.skipTimer()">Auflösen</button>
+            </div>
+        </div>
+
+        <!-- SCREEN: PLAYER QUESTION -->
+        <div id="screen-player-question" class="screen">
+            <div id="player-question-container" class="card" style="margin-bottom: 10px;">
+                <h3 id="player-q-text" style="margin: 0; font-size: 1.2rem;">Lade Frage...</h3>
+            </div>
+            
+            <div class="player-buttons">
+                <!-- Buttons will be populated dynamically -->
+                <button class="btn-answer answer-a" onclick="app.submitAnswer(0)">
+                    <span class="letter">A</span>
+                    <span class="ans-text" id="player-ans-a">Antwort A</span>
+                </button>
+                <button class="btn-answer answer-b" onclick="app.submitAnswer(1)">
+                    <span class="letter">B</span>
+                    <span class="ans-text" id="player-ans-b">Antwort B</span>
+                </button>
+                <button class="btn-answer answer-c" onclick="app.submitAnswer(2)">
+                    <span class="letter">C</span>
+                    <span class="ans-text" id="player-ans-c">Antwort C</span>
+                </button>
+            </div>
+            <div id="player-answered-msg" class="hidden waiting-msg">Antwort gesendet! Warte auf die anderen...</div>
+        </div>
+
+        <!-- SCREEN: HOST RESULT & RANKING -->
+        <div id="screen-host-result" class="screen">
+            <div class="result-header">Ergebnis</div>
+            <div class="card correct-answer-box">
+                Richtig ist: <strong id="host-correct-text">Antwort B</strong>
+            </div>
+
+            <div class="card ranking-box">
+                <h3>Top 5 Ranking</h3>
+                <ul id="host-ranking-list" class="ranking-list">
+                    <!-- Ranking items -->
+                </ul>
+            </div>
+            
+            <div class="bottom-controls">
+                <button class="btn btn-primary btn-large" id="btn-next-question" onclick="app.nextQuestion()">Nächste Frage</button>
+            </div>
+        </div>
+
+        <!-- SCREEN: PLAYER RESULT -->
+        <div id="screen-player-result" class="screen">
+            <div id="player-result-icon" class="result-icon">✓</div>
+            <h1 id="player-result-title">Richtig!</h1>
+            <div class="points-badge">+<span id="player-result-points">100</span> Punkte</div>
+            
+            <div class="card score-card mt-2">
+                <div>Dein Punktestand: <strong id="player-total-score">0</strong></div>
+                <div>Dein Platz: <strong id="player-rank">1</strong></div>
+            </div>
+            
+            <p class="wait-text">Schau auf den Hauptbildschirm!</p>
+        </div>
+
+        <!-- SCREEN: FINAL HOST -->
+        <div id="screen-host-final" class="screen">
+            <div class="card podium-card transparent">
+                <h1>Siegerehrung</h1>
+                <div class="podium" id="podium-container">
+                    <!-- Podium generated by JS -->
+                </div>
+                <button class="btn btn-primary mt-2" onclick="location.reload()">Neues Spiel</button>
+            </div>
+        </div>
+
+        <!-- SCREEN: FINAL PLAYER -->
+        <div id="screen-player-final" class="screen">
+            <div class="card end-card">
+                <h1>Quiz Beendet!</h1>
+                <div class="final-rank-circle" id="player-final-rank">#1</div>
+                <h2>Du hast <span id="player-final-score">0</span> Punkte erreicht!</h2>
+                <button class="btn btn-primary mt-2" onclick="location.reload()">Hauptmenü</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/questions.js"></script>
+    <script src="js/network.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
