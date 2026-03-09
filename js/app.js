@@ -311,14 +311,14 @@ class QuizApp {
         }
     }
 
-    showIntermediateRanking() {
+    showIntermediateRanking(isGameOver = false) {
         // Ranking sortieren
         const sortedPlayers = Object.values(this.players).filter(p => p.active || p.score > 0).sort((a,b) => b.score - a.score);
         
         const list = document.getElementById('host-ranking-list');
         list.innerHTML = '';
         
-        for (let i = 0; i < Math.min(5, sortedPlayers.length); i++) {
+        for (let i = 0; i < sortedPlayers.length; i++) {
             const p = sortedPlayers[i];
             const li = document.createElement('li');
             li.innerHTML = `<span>${i+1}. ${p.name}</span> <span class="points">${p.score} pt</span>`;
@@ -326,8 +326,21 @@ class QuizApp {
             
             // Send ranking to players
             const pId = Object.keys(this.players).find(key => this.players[key] === p);
-            if (pId && !this.isLocal && window.network.connections[pId]) {
+            if (pId && !this.isLocal && window.network.connections[pId] && !isGameOver) {
                 window.network.connections[pId].send({ cmd: 'rank_update', rank: i+1 });
+            }
+        }
+
+        const nextBtn = document.getElementById('btn-ranking-next');
+        const backBtn = document.getElementById('btn-back-to-podium');
+
+        if (!isGameOver) {
+            backBtn.style.display = 'none';
+            nextBtn.style.display = 'inline-block';
+            if (this.currentQuestionIndex >= questions.length - 1) {
+                nextBtn.innerText = "Ergebnisse anzeigen";
+            } else {
+                nextBtn.innerText = "Nächste Frage";
             }
         }
 
@@ -366,6 +379,17 @@ class QuizApp {
         this.confetti();
     }
 
+    toggleFinalViews(view) {
+        if (view === 'ranking') {
+            // Zeige die Liste, verstecke "Nächste Frage", zeige "Zurück"
+            document.getElementById('btn-ranking-next').style.display = 'none';
+            document.getElementById('btn-back-to-podium').style.display = 'inline-block';
+            this.showIntermediateRanking(true); // true = game over mode
+        } else {
+            // Zurück zum Podest
+            this.showScreen('screen-host-final');
+        }
+    }
 
     // --- CLIENT LOGIK ---
     async joinGame() {
