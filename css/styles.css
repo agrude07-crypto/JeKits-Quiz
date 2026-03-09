@@ -556,12 +556,18 @@ h1 {
 .podium-place.place-3 { height: 130px; background: #cd7f32; }
 .podium-name {
     position: absolute;
-    top: -40px;
+    bottom: 100%; /* Position right above the podium */
     font-family: var(--font-body);
     font-size: 1.2rem;
     font-weight: bold;
-    color: var(--color-text);
+    color: var(--color-primary);
+    background: white;
+    padding: 10px 15px;
+    border-radius: 10px;
     white-space: nowrap;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    margin-bottom: 5px; /* Add a little gap */
 }
 
 /* Questions Result Overview */
