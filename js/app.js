@@ -333,7 +333,9 @@ class QuizApp {
         const list = document.getElementById('host-ranking-list');
         list.innerHTML = '';
         
-        for (let i = 0; i < sortedPlayers.length; i++) {
+        const limit = isGameOver ? sortedPlayers.length : Math.min(10, sortedPlayers.length);
+        
+        for (let i = 0; i < limit; i++) {
             const p = sortedPlayers[i];
             const li = document.createElement('li');
             li.innerHTML = `<span>${i+1}. ${p.name}</span> <span class="points">${p.score} pt</span>`;

@@ -29,7 +29,7 @@
                 <h2>Willkommen beim JeKits Quiz</h2>
                 <div class="btn-group">
                     <button class="btn btn-primary btn-large" onclick="app.initHost()">Quiz starten (Host)</button>
-                    <button class="btn btn-secondary btn-large" onclick="app.initPlayer()">Am Quiz teilnehmen</button>
+                    <button class="btn btn-red btn-large" onclick="app.initPlayer()">Am Quiz teilnehmen</button>
                     <button class="btn btn-outline" onclick="app.initLocal()">Lokal spielen (Ohne WLAN)</button>
                 </div>
             </div>
@@ -72,7 +72,7 @@
                     <label for="input-player-name">Dein Name / Team:</label>
                     <input type="text" id="input-player-name" placeholder="Name eingeben" autocomplete="off" maxlength="15">
                 </div>
-                <button class="btn btn-primary btn-large full-width" onclick="app.joinGame()">Los geht's!</button>
+                <button class="btn btn-red btn-large full-width" onclick="app.joinGame()">Los geht's!</button>
                 <button class="btn btn-outline full-width" onclick="app.showScreen('screen-start')">Zurück</button>
                 <div id="join-error" class="error-msg"></div>
             </div>

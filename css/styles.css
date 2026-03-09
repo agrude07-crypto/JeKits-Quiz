@@ -148,6 +148,10 @@ h1 {
     background-color: var(--color-secondary);
     color: white;
 }
+.btn-red {
+    background-color: var(--color-wrong);
+    color: white;
+}
 .btn-outline {
     background-color: transparent;
     border: 2px solid var(--color-primary);
