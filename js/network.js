@@ -21,14 +21,21 @@ class QuizNetwork {
     initHost() {
         this.role = 'host';
         // Erzeuge eine kurze ID für das Spiel (z.B. ABCDE)
-        this.myId = this.generateGameId();
+        const gameId = this.generateGameId();
+        // Verwende intern ein Präfix "jekits-", da auf dem öffentlichen PeerJS Server
+        // kurze 5-stellige IDs oft zu Kollisionen und Verbindungsfehlern führen.
+        this.myId = 'jekits-' + gameId;
         
         return new Promise((resolve, reject) => {
-            this.peer = new Peer(this.myId);
+            this.peer = new Peer(this.myId, {
+                // Optional: Config defaults, aber gut zum sicherstellen
+                debug: 2
+            });
             
             this.peer.on('open', (id) => {
-                console.log('Host created with ID:', id);
-                resolve(id);
+                console.log('Host created with internal ID:', id);
+                // Gib nach außen (für die UI) nur den 5-stelligen Code zurück
+                resolve(gameId);
             });
 
             this.peer.on('error', (err) => {
@@ -80,11 +87,14 @@ class QuizNetwork {
     initClient(hostId, playerName) {
         this.role = 'client';
         return new Promise((resolve, reject) => {
-            this.peer = new Peer();
+            this.peer = new Peer({ debug: 2 });
             
             this.peer.on('open', (id) => {
                 this.myId = id;
-                const conn = this.peer.connect(hostId.toUpperCase());
+                // Client muss sich mit der präfixierten Host-ID verbinden
+                const conn = this.peer.connect('jekits-' + hostId.toUpperCase(), {
+                    reliable: true // Force reliable data transfer
+                });
                 
                 conn.on('open', () => {
                     this.hostConnection = conn;
