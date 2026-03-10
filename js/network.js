@@ -17,17 +17,32 @@ class QuizNetwork {
         this.onHostCommand = null;        // (commandData)
     }
 
-    // PeerJS Konfiguration mit expliziten ICE Servern
+    // PeerJS Konfiguration mit STUN + TURN Servern
+    // TURN Server sind nötig wenn Geräte hinter restriktiven Firewalls/NATs sind
     getPeerConfig() {
         return {
             config: {
                 iceServers: [
+                    // STUN Server (für einfache NAT-Durchquerung)
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-                    { urls: 'stun:global.stun.twilio.com:3478' }
+                    { urls: 'stun:global.stun.twilio.com:3478' },
+                    // TURN Server (für restriktive Netzwerke - leitet Daten weiter)
+                    {
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    }
                 ]
             }
         };
@@ -43,14 +58,13 @@ class QuizNetwork {
             this.peer = new Peer(this.myId, this.getPeerConfig());
             
             this.peer.on('open', (id) => {
-                console.log('[JeKits] Host verbunden mit Server! ID:', id, '| PIN:', gameId);
+                console.log('[JeKits] Host verbunden! ID:', id, '| PIN:', gameId);
                 resolve(gameId);
             });
 
             this.peer.on('error', (err) => {
                 console.error('[JeKits] Host Fehler:', err.type, err.message || err);
                 if (err.type === 'unavailable-id') {
-                    console.warn('[JeKits] ID belegt, versuche neue...');
                     this.peer.destroy();
                     const newId = this.generateGameId();
                     this.myId = 'jekitsquiz' + newId;
@@ -68,7 +82,7 @@ class QuizNetwork {
             });
 
             this.peer.on('disconnected', () => {
-                console.warn('[JeKits] Host vom Server getrennt, versuche Reconnect...');
+                console.warn('[JeKits] Reconnecting...');
                 if (this.peer && !this.peer.destroyed) {
                     this.peer.reconnect();
                 }
@@ -81,7 +95,7 @@ class QuizNetwork {
         this.connections[playerId] = conn;
 
         conn.on('open', () => {
-            console.log('[JeKits] Client verbunden:', playerId);
+            console.log('[JeKits] Spieler verbunden:', playerId);
         });
 
         conn.on('data', (data) => {
@@ -93,7 +107,6 @@ class QuizNetwork {
         });
 
         conn.on('close', () => {
-            console.log('[JeKits] Client getrennt:', playerId);
             delete this.connections[playerId];
             if (this.onPlayerLeft) this.onPlayerLeft(playerId);
         });
@@ -102,9 +115,7 @@ class QuizNetwork {
     broadcast(data) {
         if (this.role !== 'host') return;
         Object.values(this.connections).forEach(conn => {
-            if (conn.open) {
-                conn.send(data);
-            }
+            if (conn.open) conn.send(data);
         });
     }
 
@@ -118,18 +129,17 @@ class QuizNetwork {
             const timeout = setTimeout(() => {
                 if (!settled) {
                     settled = true;
-                    console.error('[JeKits] Timeout nach 12s');
                     if (this.peer) this.peer.destroy();
                     reject(new Error('Timeout'));
                 }
-            }, 12000);
+            }, 15000); // 15 Sekunden
 
             this.peer = new Peer(this.getPeerConfig());
             
             this.peer.on('open', (id) => {
                 this.myId = id;
                 const targetId = 'jekitsquiz' + hostId.toUpperCase();
-                console.log('[JeKits] Client bereit, verbinde zu:', targetId);
+                console.log('[JeKits] Verbinde zu Host:', targetId);
                 
                 const conn = this.peer.connect(targetId, { reliable: true });
                 
@@ -138,7 +148,6 @@ class QuizNetwork {
                         settled = true;
                         clearTimeout(timeout);
                         this.hostConnection = conn;
-                        console.log('[JeKits] Verbunden!');
                         conn.send({ type: 'join', name: playerName });
                         resolve();
                     }
@@ -149,14 +158,13 @@ class QuizNetwork {
                 });
 
                 conn.on('close', () => {
-                    console.warn('[JeKits] Verbindung zum Host verloren');
+                    console.warn('[JeKits] Verbindung verloren');
                 });
                 
                 conn.on('error', (err) => {
                     if (!settled) {
                         settled = true;
                         clearTimeout(timeout);
-                        console.error('[JeKits] Verbindungsfehler:', err);
                         reject(err);
                     }
                 });
@@ -166,7 +174,7 @@ class QuizNetwork {
                 if (!settled) {
                     settled = true;
                     clearTimeout(timeout);
-                    console.error('[JeKits] Peer Fehler:', err.type, err.message || err);
+                    console.error('[JeKits] Fehler:', err.type, err.message || err);
                     reject(err);
                 }
             });
