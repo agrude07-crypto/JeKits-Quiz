@@ -69,7 +69,7 @@ class QuizApp {
         this.isLocal = true;
         this.currentQuestionIndex = 0;
         // Lokaler Spieler anlegen
-        this.players['local'] = { name: 'Du', score: 0, active: true };
+        this.players['local'] = { name: 'Du', score: 0, scoreHistory: [], active: true, answeredIndex: -1, answerTime: 0 };
         this.renderHostQuestion();
         this.showScreen('screen-host-question'); // Local spielt direkt im Host-Screen
     }
@@ -487,7 +487,14 @@ class QuizApp {
             document.getElementById('wait-message').innerText = "Du bist drin! Warte auf Start...";
             this.showScreen('screen-wait');
         } catch (err) {
-            errEl.innerText = "Verbindung fehlgeschlagen. PIN richtig?";
+            console.error('[JeKits] Join fehlgeschlagen:', err);
+            if (err && err.type === 'peer-unavailable') {
+                errEl.innerText = "Kein Quiz mit dieser PIN gefunden. Bitte prüfe die PIN.";
+            } else if (err && err.message && err.message.includes('Timeout')) {
+                errEl.innerText = "Verbindung dauert zu lange. Bitte prüfe die PIN und versuche es nochmal.";
+            } else {
+                errEl.innerText = "Verbindung fehlgeschlagen. Bitte prüfe die PIN und stelle sicher, dass der Host gestartet hat.";
+            }
         }
     }
 
