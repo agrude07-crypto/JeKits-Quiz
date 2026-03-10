@@ -34,6 +34,8 @@ class QuizApp {
         try {
             const gameId = await window.network.initHost();
             document.getElementById('host-game-id').innerText = gameId;
+            document.getElementById('host-connection-status').innerText = '✅ Bereit – Teilnehmer können sich verbinden!';
+            document.getElementById('host-connection-status').style.color = 'var(--color-correct)';
             
             // Generate QR Code
             const currentUrl = window.location.href.split('?')[0];

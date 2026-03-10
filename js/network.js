@@ -17,36 +17,47 @@ class QuizNetwork {
         this.onHostCommand = null;        // (commandData)
     }
 
+    // PeerJS Konfiguration mit expliziten ICE Servern
+    getPeerConfig() {
+        return {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
+                ]
+            }
+        };
+    }
+
     // --- HOST METHODS ---
     initHost() {
         this.role = 'host';
-        // Erzeuge eine kurze ID für das Spiel (z.B. ABCDE)
         const gameId = this.generateGameId();
-        // Verwende intern ein Präfix, damit es auf dem öffentlichen PeerJS Server
-        // keine Kollisionen mit anderen Apps gibt.
-        this.myId = 'jekits-quiz-' + gameId;
+        this.myId = 'jekitsquiz' + gameId;
         
         return new Promise((resolve, reject) => {
-            this.peer = new Peer(this.myId);
+            this.peer = new Peer(this.myId, this.getPeerConfig());
             
             this.peer.on('open', (id) => {
-                console.log('[JeKits] Host erstellt. Interne ID:', id, '| Game PIN:', gameId);
-                // Gib nach außen nur den 5-stelligen Code zurück (für die UI)
+                console.log('[JeKits] Host verbunden mit Server! ID:', id, '| PIN:', gameId);
                 resolve(gameId);
             });
 
             this.peer.on('error', (err) => {
-                console.error('[JeKits] Host Peer Fehler:', err.type, err);
-                // Bei ID-Kollision: neuen Code generieren und nochmal versuchen
+                console.error('[JeKits] Host Fehler:', err.type, err.message || err);
                 if (err.type === 'unavailable-id') {
-                    console.warn('[JeKits] ID-Kollision, versuche neue ID...');
+                    console.warn('[JeKits] ID belegt, versuche neue...');
                     this.peer.destroy();
                     const newId = this.generateGameId();
-                    this.myId = 'jekits-quiz-' + newId;
-                    this.peer = new Peer(this.myId);
+                    this.myId = 'jekitsquiz' + newId;
+                    this.peer = new Peer(this.myId, this.getPeerConfig());
                     this.peer.on('open', () => resolve(newId));
-                    this.peer.on('error', (err2) => reject(err2));
-                    this.peer.on('connection', (conn) => this.setupHostConnection(conn));
+                    this.peer.on('error', (e) => reject(e));
+                    this.peer.on('connection', (c) => this.setupHostConnection(c));
                 } else {
                     reject(err);
                 }
@@ -54,6 +65,13 @@ class QuizNetwork {
 
             this.peer.on('connection', (conn) => {
                 this.setupHostConnection(conn);
+            });
+
+            this.peer.on('disconnected', () => {
+                console.warn('[JeKits] Host vom Server getrennt, versuche Reconnect...');
+                if (this.peer && !this.peer.destroyed) {
+                    this.peer.reconnect();
+                }
             });
         });
     }
@@ -67,7 +85,6 @@ class QuizNetwork {
         });
 
         conn.on('data', (data) => {
-            console.log('[JeKits] Host empfangen:', data);
             if (data.type === 'join') {
                 if (this.onPlayerJoined) this.onPlayerJoined(playerId, data.name);
             } else if (data.type === 'answer') {
@@ -82,7 +99,6 @@ class QuizNetwork {
         });
     }
 
-    // Rundruf an alle Clients
     broadcast(data) {
         if (this.role !== 'host') return;
         Object.values(this.connections).forEach(conn => {
@@ -97,33 +113,38 @@ class QuizNetwork {
         this.role = 'client';
 
         return new Promise((resolve, reject) => {
-            // Timeout: wenn nach 10 Sekunden keine Verbindung steht, abbrechen
+            let settled = false;
+            
             const timeout = setTimeout(() => {
-                console.error('[JeKits] Verbindungs-Timeout nach 10s');
-                if (this.peer) this.peer.destroy();
-                reject(new Error('Verbindungs-Timeout. Bitte prüfe die PIN und versuche es nochmal.'));
-            }, 10000);
+                if (!settled) {
+                    settled = true;
+                    console.error('[JeKits] Timeout nach 12s');
+                    if (this.peer) this.peer.destroy();
+                    reject(new Error('Timeout'));
+                }
+            }, 12000);
 
-            this.peer = new Peer();
+            this.peer = new Peer(this.getPeerConfig());
             
             this.peer.on('open', (id) => {
                 this.myId = id;
-                console.log('[JeKits] Client Peer erstellt:', id);
-                console.log('[JeKits] Versuche Verbindung zu:', 'jekits-quiz-' + hostId.toUpperCase());
+                const targetId = 'jekitsquiz' + hostId.toUpperCase();
+                console.log('[JeKits] Client bereit, verbinde zu:', targetId);
                 
-                const conn = this.peer.connect('jekits-quiz-' + hostId.toUpperCase());
+                const conn = this.peer.connect(targetId, { reliable: true });
                 
                 conn.on('open', () => {
-                    clearTimeout(timeout);
-                    this.hostConnection = conn;
-                    console.log('[JeKits] Verbindung zum Host hergestellt!');
-                    // Send name to host
-                    conn.send({ type: 'join', name: playerName });
-                    resolve();
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timeout);
+                        this.hostConnection = conn;
+                        console.log('[JeKits] Verbunden!');
+                        conn.send({ type: 'join', name: playerName });
+                        resolve();
+                    }
                 });
 
                 conn.on('data', (data) => {
-                    console.log('[JeKits] Client empfangen:', data);
                     if (this.onHostCommand) this.onHostCommand(data);
                 });
 
@@ -132,16 +153,22 @@ class QuizNetwork {
                 });
                 
                 conn.on('error', (err) => {
-                    clearTimeout(timeout);
-                    console.error('[JeKits] Verbindungsfehler:', err);
-                    reject(err);
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(timeout);
+                        console.error('[JeKits] Verbindungsfehler:', err);
+                        reject(err);
+                    }
                 });
             });
 
             this.peer.on('error', (err) => {
-                clearTimeout(timeout);
-                console.error('[JeKits] Client Peer Fehler:', err.type, err);
-                reject(err);
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timeout);
+                    console.error('[JeKits] Peer Fehler:', err.type, err.message || err);
+                    reject(err);
+                }
             });
         });
     }
@@ -152,9 +179,8 @@ class QuizNetwork {
         }
     }
 
-    // --- UTILS ---
     generateGameId() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Keine 0,O,1,I
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let result = '';
         for (let i = 0; i < 5; i++) {
             result += chars.charAt(Math.floor(Math.random() * chars.length));
