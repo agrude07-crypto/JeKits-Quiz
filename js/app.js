@@ -36,18 +36,18 @@ class QuizApp {
             document.getElementById('host-game-id').innerText = gameId;
             document.getElementById('host-connection-status').innerText = '✅ Bereit – Teilnehmer können sich verbinden!';
             document.getElementById('host-connection-status').style.color = 'var(--color-correct)';
-            
+
             // Generate QR Code
             const currentUrl = window.location.href.split('?')[0];
             const joinUrl = `${currentUrl}?join=${gameId}`;
-            
+
             new QRCode(document.getElementById("qrcode"), {
                 text: joinUrl,
                 width: 150,
                 height: 150,
-                colorDark : "#193264",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.L
+                colorDark: "#193264",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.L
             });
 
             this.showScreen('screen-host-lobby');
@@ -58,7 +58,7 @@ class QuizApp {
 
     initPlayer() {
         this.showScreen('screen-player-login');
-        
+
         // Check URL params for auto-fill Game PIN
         const urlParams = new URLSearchParams(window.location.search);
         const joinPin = urlParams.get('join');
@@ -80,7 +80,7 @@ class QuizApp {
     onPlayerJoined(id, name) {
         this.players[id] = { name: name, score: 0, scoreHistory: [], active: true, answeredIndex: -1, answerTime: 0 };
         this.updatePlayerList();
-        
+
         if (Object.keys(this.players).length > 0) {
             document.getElementById('btn-start-quiz').disabled = false;
         }
@@ -97,7 +97,7 @@ class QuizApp {
         const list = document.getElementById('player-list');
         list.innerHTML = '';
         let activeCount = 0;
-        
+
         for (const [id, p] of Object.entries(this.players)) {
             if (p.active) {
                 activeCount++;
@@ -117,7 +117,7 @@ class QuizApp {
 
     renderHostQuestion() {
         const q = questions[this.currentQuestionIndex];
-        
+
         // Reset answers
         for (let pid in this.players) {
             this.players[pid].answeredIndex = -1;
@@ -126,21 +126,33 @@ class QuizApp {
 
         document.getElementById('host-q-num').innerText = (this.currentQuestionIndex + 1);
         document.getElementById('host-q-text').innerText = q.text;
-        
+
         const ansCards = document.querySelectorAll('#host-answers .answer-card');
         ansCards.forEach((card, idx) => {
             card.className = 'answer-card'; // Reset CSS
             card.querySelector('.text').innerText = q.options[idx];
+
+            // Im lokalen Modus: Klick auf Antwortkarten ermöglichen
+            if (this.isLocal) {
+                card.classList.add('local-clickable');
+                card.onclick = () => {
+                    if (this.players['local'].answeredIndex !== -1) return; // Schon beantwortet
+                    card.classList.add('selected');
+                    this.submitAnswer(idx);
+                };
+            } else {
+                card.onclick = null;
+            }
         });
 
-        document.getElementById('answers-received').innerText = `0 Antworten erhalten`;
-        
+        document.getElementById('answers-received').innerText = this.isLocal ? '' : `0 Antworten erhalten`;
+
         this.showScreen('screen-host-question');
         this.startTimer();
 
         if (!this.isLocal) {
-            window.network.broadcast({ 
-                cmd: 'question', 
+            window.network.broadcast({
+                cmd: 'question',
                 text: q.text,
                 answers: q.options,
                 current: this.currentQuestionIndex + 1,
@@ -159,12 +171,12 @@ class QuizApp {
         this.questionStartTime = Date.now();
         const tEl = document.getElementById('host-timer');
         const pEl = document.getElementById('host-progress');
-        
+
         tEl.innerText = this.timeLeft;
         pEl.style.width = '100%';
 
         clearInterval(this.timerInterval);
-        
+
         this.timerInterval = setInterval(() => {
             this.timeLeft--;
             tEl.innerText = this.timeLeft;
@@ -186,13 +198,13 @@ class QuizApp {
             this.players[playerId].answeredIndex = answerIndex;
             const timeTaken = Date.now() - this.questionStartTime;
             this.players[playerId].answerTime = timeTaken;
-            
+
             this.updateAnswersCount();
 
             // Automatisch auflösen wenn alle geantwortet haben
             const activeCount = Object.values(this.players).filter(p => p.active).length;
             const answeredCount = Object.values(this.players).filter(p => p.active && p.answeredIndex !== -1).length;
-            
+
             if (answeredCount >= activeCount) {
                 this.endQuestion();
             }
@@ -207,25 +219,25 @@ class QuizApp {
     endQuestion() {
         clearInterval(this.timerInterval);
         const q = questions[this.currentQuestionIndex];
-        
+
         // Punkte berechnen
         // Max 1000 pkt. (100% == 0s), 50% decay over TIME_PER_QUESTION
         for (let pid in this.players) {
             const p = this.players[pid];
-            
+
             // Ensure scoreHistory array is big enough
-            while(p.scoreHistory.length <= this.currentQuestionIndex) {
+            while (p.scoreHistory.length <= this.currentQuestionIndex) {
                 p.scoreHistory.push(0);
             }
 
             if (p.active && p.answeredIndex === q.correctIndex) {
                 const ratio = Math.max(0, 1 - (p.answerTime / (TIME_PER_QUESTION * 1000)));
                 const points = Math.round(500 + (500 * ratio));
-                
+
                 // Track points for this specific question
                 p.scoreHistory[this.currentQuestionIndex] = points;
                 p.score = p.scoreHistory.reduce((sum, val) => sum + val, 0);
-                
+
                 if (!this.isLocal) {
                     window.network.connections[pid]?.send({ cmd: 'result', correct: true, points: points, totalScore: p.score });
                 }
@@ -251,7 +263,7 @@ class QuizApp {
 
     renderHostResult() {
         const q = questions[this.currentQuestionIndex];
-        
+
         const ansCards = document.querySelectorAll('#host-answers .answer-card');
         ansCards.forEach((card, idx) => {
             if (idx === q.correctIndex) card.classList.add('correct');
@@ -269,7 +281,7 @@ class QuizApp {
         activePlayers.forEach(p => {
             if (p.answeredIndex >= 0 && p.answeredIndex <= 2) {
                 distribution[p.answeredIndex]++;
-                
+
                 // 2. Collect Correct Players
                 if (p.answeredIndex === q.correctIndex) {
                     correctPlayers.push(p);
@@ -292,11 +304,11 @@ class QuizApp {
         // Update Winner UI (Top 5 Fastest Correct)
         const winnerContainer = document.getElementById('host-round-winner');
         winnerContainer.innerHTML = ''; // Clear old content
-        
+
         if (correctPlayers.length > 0) {
             // Sort by lowest answer time first
-            correctPlayers.sort((a,b) => a.answerTime - b.answerTime);
-            
+            correctPlayers.sort((a, b) => a.answerTime - b.answerTime);
+
             const listEl = document.createElement('ul');
             listEl.style.listStyle = 'none';
             listEl.style.padding = '0';
@@ -304,7 +316,7 @@ class QuizApp {
             listEl.style.textAlign = 'left';
 
             const limit = Math.min(5, correctPlayers.length);
-            for(let i=0; i<limit; i++) {
+            for (let i = 0; i < limit; i++) {
                 const p = correctPlayers[i];
                 const timeInSeconds = (p.answerTime / 1000).toFixed(1);
                 const li = document.createElement('li');
@@ -312,7 +324,7 @@ class QuizApp {
                 li.style.borderBottom = '1px solid #eee';
                 li.style.display = 'flex';
                 li.style.justifyContent = 'space-between';
-                li.innerHTML = `<span><strong style="color:var(--color-primary)">${i+1}.</strong> ${p.name}</span> <span style="color:#666">${timeInSeconds} s</span>`;
+                li.innerHTML = `<span><strong style="color:var(--color-primary)">${i + 1}.</strong> ${p.name}</span> <span style="color:#666">${timeInSeconds} s</span>`;
                 listEl.appendChild(li);
             }
             winnerContainer.appendChild(listEl);
@@ -321,7 +333,7 @@ class QuizApp {
         }
 
         this.showScreen('screen-host-result');
-        
+
         if (this.currentQuestionIndex >= questions.length - 1) {
             document.getElementById('btn-next-question').innerText = "Ergebnisse anzeigen";
             this.confetti();
@@ -330,11 +342,11 @@ class QuizApp {
 
     showIntermediateRanking(isGameOver = false) {
         // Ranking sortieren
-        const sortedPlayers = Object.values(this.players).filter(p => p.active || p.score > 0).sort((a,b) => b.score - a.score);
-        
+        const sortedPlayers = Object.values(this.players).filter(p => p.active || p.score > 0).sort((a, b) => b.score - a.score);
+
         const list = document.getElementById('host-ranking-list');
         list.innerHTML = '';
-        
+
         const limit = isGameOver ? sortedPlayers.length : Math.min(10, sortedPlayers.length);
         const titleEl = document.getElementById('host-ranking-title');
         if (isGameOver) {
@@ -350,13 +362,13 @@ class QuizApp {
         for (let i = 0; i < limit; i++) {
             const p = sortedPlayers[i];
             const li = document.createElement('li');
-            li.innerHTML = `<span>${i+1}. ${p.name}</span> <span class="points">${p.score} pt</span>`;
+            li.innerHTML = `<span>${i + 1}. ${p.name}</span> <span class="points">${p.score} pt</span>`;
             list.appendChild(li);
-            
+
             // Send ranking to players
             const pId = Object.keys(this.players).find(key => this.players[key] === p);
             if (pId && !this.isLocal && window.network.connections[pId] && !isGameOver) {
-                window.network.connections[pId].send({ cmd: 'rank_update', rank: i+1 });
+                window.network.connections[pId].send({ cmd: 'rank_update', rank: i + 1 });
             }
         }
 
@@ -386,7 +398,7 @@ class QuizApp {
     }
 
     showFinalRanking() {
-        const sortedPlayers = Object.values(this.players).filter(p => p.active || p.score > 0).sort((a,b) => b.score - a.score);
+        const sortedPlayers = Object.values(this.players).filter(p => p.active || p.score > 0).sort((a, b) => b.score - a.score);
         const podium = document.getElementById('podium-container');
         podium.innerHTML = '';
 
@@ -424,7 +436,7 @@ class QuizApp {
     showOverview() {
         // Track where we came from so "Zurück" knows where to go
         this.previousScreen = document.querySelector('.screen.active').id;
-        
+
         const list = document.getElementById('overview-list');
         list.innerHTML = '';
 
@@ -435,13 +447,13 @@ class QuizApp {
                 btn.classList.add('active-question');
             }
             btn.innerHTML = `<strong>Frage ${idx + 1}:</strong><br/><span style="font-size:0.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${q.text}</span>`;
-            
+
             btn.onclick = () => {
-                if(confirm(`Möchtest du wirklich zu Frage ${idx + 1} springen? Alle Punkte ab dieser Frage werden gelöscht.`)) {
+                if (confirm(`Möchtest du wirklich zu Frage ${idx + 1} springen? Alle Punkte ab dieser Frage werden gelöscht.`)) {
                     this.jumpToQuestion(idx);
                 }
             };
-            
+
             list.appendChild(btn);
         });
 
@@ -456,7 +468,7 @@ class QuizApp {
 
     jumpToQuestion(index) {
         this.currentQuestionIndex = index;
-        
+
         // Rollback score history for all players up to the new current question
         for (let pid in this.players) {
             const p = this.players[pid];
@@ -464,7 +476,7 @@ class QuizApp {
             p.scoreHistory = p.scoreHistory.slice(0, index);
             p.score = p.scoreHistory.reduce((sum, val) => sum + val, 0);
         }
-        
+
         // Render the new question (this also broadcasts 'start_timer' and 'question' commands to clients)
         this.renderHostQuestion();
     }
@@ -485,7 +497,7 @@ class QuizApp {
             errEl.innerText = "Verbinde...";
             await window.network.initClient(gameId, playerName);
             errEl.innerText = "";
-            
+
             document.getElementById('wait-message').innerText = "Du bist drin! Warte auf Start...";
             this.showScreen('screen-wait');
         } catch (err) {
@@ -507,7 +519,7 @@ class QuizApp {
         } else if (data.cmd === 'question') {
             this.hasAnswered = false;
             document.getElementById('player-answered-msg').classList.add('hidden');
-            
+
             // Fragentext und Optionen auf dem Smartphone anzeigen
             document.getElementById('player-q-text').innerText = data.text;
             document.getElementById('player-ans-a').innerText = data.answers[0];
@@ -516,25 +528,25 @@ class QuizApp {
             if (data.current && data.total) {
                 document.getElementById('player-q-number').innerText = `Frage ${data.current} von ${data.total}`;
             }
-            
+
             this.showScreen('screen-player-question');
         } else if (data.cmd === 'start_timer') {
             const tEl = document.getElementById('player-timer');
             const pEl = document.getElementById('player-progress');
-            
+
             // Initial render
             tEl.innerText = data.timePerQuestion;
             pEl.style.width = '100%';
-            
+
             clearInterval(this.playerTimerInterval);
-            
+
             this.playerTimerInterval = setInterval(() => {
                 // Calculate time passed since host started the question to avoid drift
                 // (using local Date.now() assuming the clocks are relatively close, or just count down 1s at a time)
                 // For a simple robust approach, just count down locally like the host does.
                 let currentVal = parseInt(tEl.innerText);
                 currentVal--;
-                
+
                 if (currentVal >= 0) {
                     tEl.innerText = currentVal;
                     pEl.style.width = `${(currentVal / data.timePerQuestion) * 100}%`;
@@ -550,7 +562,7 @@ class QuizApp {
             const titleEl = document.getElementById('player-result-title');
             const iconEl = document.getElementById('player-result-icon');
             const ptsEl = document.getElementById('player-result-points');
-            
+
             if (data.correct) {
                 titleEl.innerText = "Richtig!";
                 iconEl.innerText = "✓";
@@ -562,10 +574,10 @@ class QuizApp {
                 iconEl.style.color = "var(--color-wrong)";
                 ptsEl.innerText = "0";
             }
-            
+
             this.myScore = data.totalScore;
             document.getElementById('player-total-score').innerText = this.myScore;
-            
+
             this.showScreen('screen-player-result');
         } else if (data.cmd === 'rank_update') {
             this.myRank = data.rank;
@@ -579,7 +591,7 @@ class QuizApp {
 
     submitAnswer(index) {
         if (this.hasAnswered) return;
-        
+
         if (this.isLocal) {
             // Im lokalen Modus beantwortet man direkt
             this.players['local'].answeredIndex = index;
